@@ -1,0 +1,18 @@
+[data-theme-version="dark"] {
+    .nav-header, 
+    .nav-control {
+       /*  background-color:var(--nav-headbg); */
+    }
+
+    .nav-control {
+        color: $white;
+    }
+
+    .brand-logo {
+        color: $white;
+
+        &:hover {
+            color: $white;
+        }
+    }
+}
