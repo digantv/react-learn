@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "sass": "node-sass --watch src/assets/scss/main.scss src/assets/css/style.css --source-map src/assets/css/style.css.map",
+    "sass": "sass --watch src/assets/scss/main.scss src/assets/css/style.css --source-map src/assets/css/style.css.map",
     "preview": "vite preview"
   },
   "dependencies": {
@@ -19,6 +19,7 @@
     "@fullcalendar/timegrid": "^6.1.15",
     "@loadable/component": "^5.16.4",
     "axios": "^1.7.3",
+    "eres": "file:",
     "formik": "^2.4.6",
     "lightgallery": "^2.7.2",
     "node-sass": "^9.0.0",
