@@ -10,6 +10,9 @@ const PdfGenerator = () => {
   const generatePDF = () => {
     const input = document.getElementById('pdf-content');
 
+    // Temporarily make the content visible
+    input.style.display = 'block';
+
     html2canvas(input).then((canvas) => {
       const imgData = canvas.toDataURL('image/png');
       const pdf = new jsPDF();
@@ -18,6 +21,9 @@ const PdfGenerator = () => {
 
       pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
       pdf.save('download.pdf');
+
+      // Hide the content again after PDF generation
+      input.style.display = 'none';
     });
   };
 
@@ -44,17 +50,6 @@ const PdfGenerator = () => {
         <p><strong>Age:</strong> {age}</p>
         <p><strong>Address:</strong> {address}</p>
       </div>
-
-      <style>{`
-        #pdf-content {
-          page-break-after: always;
-        }
-        @media print {
-          #pdf-content {
-            display: block !important;
-          }
-        }
-      `}</style>
     </div>
   );
 };
