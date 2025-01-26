@@ -1,0 +1,315 @@
+import React, { useState, useEffect } from "react";
+import { Button, Typography } from "@mui/material";
+import "./DynamicForm.css";
+import Textfield from "../Textfield/Textfield";
+import Dropdown from "../Dropdown/Dropdown";
+import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
+import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
+import { DatePicker } from "@mui/x-date-pickers/DatePicker";
+import dayjs from "dayjs";
+import { TimePicker } from "@mui/x-date-pickers";
+import { postData } from "../../common/ApiService";
+import { useNavigate } from "react-router-dom";
+import Alert from "../Alert/CustomAlert";
+import ImageUpload from "../ImageUpload/ImageUpload";
+
+const DynamicForm = ({
+  formName,
+  formData,
+  formSchema,
+  formSubmitUrl,
+  imageSubmitUrl,
+  initialValues,
+  onSubmit,
+  handleCancelButtonURI,
+}) => {
+  const navigate = useNavigate();
+  const [formDataToSubmit, setFormDataToSubmit] = useState({});
+
+  const [showAlert, setShowAlert] = useState(false);
+  const [alertType, setAlertType] = useState("success");
+  const [alertMessage, setAlertMessage] = useState("");
+  const [file, setFile] = useState(null);
+
+  const handleFormDataChange = (id, value) => {
+    setFormDataToSubmit((prevFormData) => {
+      const updatedFormDataToSubmit = { ...prevFormData };
+      updatedFormDataToSubmit[id] = value;
+      if (value.trim() === "") {
+        delete updatedFormDataToSubmit[id];
+      }
+      return updatedFormDataToSubmit;
+    });
+  };
+
+  const handleClose = () => {
+    setShowAlert(false);
+  };
+  const handleFileChange = (uploadedFile) => {
+    setFile(uploadedFile);
+  };
+
+  useEffect(() => {
+    if (initialValues) {
+      setFormDataToSubmit(initialValues);
+    }
+  }, [initialValues]);
+
+  const handleSaveButtonClicked = async () => {
+    const missingFields = formSchema.filter((item) => {
+      return (
+        item.isRequired &&
+        (!formDataToSubmit[item.id] || formDataToSubmit[item.id].trim() === "")
+      );
+    });
+
+    if (missingFields.length > 0) {
+      const missingFieldNames = missingFields
+        .map((field) => field.label)
+        .join(", ");
+      alert(`Please fill in the required fields: ${missingFieldNames}`);
+      return;
+    }
+
+    if (onSubmit) {
+      await onSubmit(formDataToSubmit);
+      console.log(formDataToSubmit);
+      const response = await postData(formSubmitUrl, formDataToSubmit);
+
+      if (response.status === 201) {
+        const data = await response.json();
+        setAlertMessage('Your changes have been saved!');
+        setAlertType('success');
+        setFormDataToSubmit({});
+      } else {
+        setAlertMessage("Error saving changes. Please try again.");
+        setAlertType("error");
+      } setShowAlert(true);
+    }
+
+  };
+  const handleUploadImageButton = async () => {
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+      const response = await fetch(imageSubmitUrl, {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error(`Error: ${response.statusText}`);
+      }
+
+      const responseData = await response.json();
+      setAlertMessage("Image uploaded successfully!");
+      setAlertType("success");
+      setFile(null); // Reset file state if needed
+    } catch (error) {
+      setAlertMessage("Error uploading image. Please try again.");
+      setAlertType("error");
+      console.error("Error uploading image:", error);
+    } finally {
+      setShowAlert(true);
+    }
+  };
+
+  const handleCancelButtonClicked = () => {
+    navigate(handleCancelButtonURI);
+  };
+
+  return (
+    <>
+      <div
+        className="flex flex-col rounded-lg bg-white shadow-2xl mb-6"
+        style={{ backgroundColor: "#fff" }}
+      >
+        <div className="flex border-b p-8">
+          <label className="font-semibold text-2xl" style={{ color: "#000" }}>
+            {formName}
+          </label>
+          <div style={{ position: "absolute", top: 10, right: 30 }}>
+            {showAlert && (
+              <Alert
+                message={alertMessage}
+                type={alertType}
+                duration={3000} // 3 seconds
+                onClose={handleClose}
+              />
+            )}
+          </div>
+        </div>
+        <div className="flex flex-wrap gap-6 p-8 grid-rows-2 iems-ctenter">
+          <div className="pane">
+            <div className="button-container">
+              {formSchema.map((item) => {
+                if (item.fieldType === "textfield") {
+                  return (
+                    <div className="full-width-button">
+                      <Textfield
+                        required={item.isRequired}
+                        disabled={item.isDisabled}
+                        label={item.label}
+                        value={formDataToSubmit[item.id] || ""}
+                        onChange={(e) =>
+                          handleFormDataChange(item.id, e.target.value)
+                        }
+                      />
+                    </div>
+                  );
+                } else if (item.fieldType === "password") {
+                  return (
+                    <div className="full-width-button">
+                      <Textfield
+                        required={item.isRequired}
+                        disabled={item.isDisabled}
+                        label={item.label}
+                        value={formDataToSubmit[item.id] || ""}
+                        onChange={(e) =>
+                          handleFormDataChange(item.id, e.target.value)
+                        }
+                      />
+                    </div>
+                  );
+                } else if (item.fieldType === "date") {
+                  return (
+                    <div className="full-width-button flex flex-col">
+                      <LocalizationProvider dateAdapter={AdapterDayjs}>
+                        <DatePicker
+                          label={
+                            <div>
+                              <Typography variant="body1" component="span">
+                                {item.label}{" "}
+                              </Typography>
+                              {item.isRequired && (
+                                <Typography
+                                  variant="body1"
+                                  component="span"
+                                  color="error"
+                                >
+                                  *
+                                </Typography>
+                              )}
+                            </div>
+                          }
+                          value={
+                            formSchema[item.id]
+                              ? dayjs(formDataToSubmit[item.id])
+                              : null
+                          }
+                          onChange={(e) =>
+                            handleFormDataChange(
+                              item.id,
+                              e.format("YYYY-MM-DD")
+                            )
+                          }
+                          sx={{
+                            minWidth: 120,
+                            "& .MuiInputLabel-root": {
+                              color: "green", // Default color
+                            },
+                            // '&:hover .MuiInputLabel-root': {
+                            //   color: 'orange', // Color on hover
+                            // },
+                            "& .MuiInputLabel-root.Mui-focused": {
+                              color: "green", // Color when focused
+                            },
+                            "& .MuiOutlinedInput-root": {
+                              "& fieldset": {
+                                borderColor: "gray", // Default border color
+                              },
+                              // '&:hover fieldset': {
+                              //   borderColor: 'orange', // Border color on hover
+                              // },
+                              "&.Mui-focused fieldset": {
+                                borderColor: "green", // Border color when focused
+                              },
+                            },
+                          }}
+                        />
+                      </LocalizationProvider>
+                    </div>
+                  );
+                } else if (item.fieldType === "dropdown") {
+                  return (
+                    <div className="full-width-button" key={item.id}>
+                      <Dropdown
+                        label={item.label}
+                        required={item.isRequired}
+                        value={formDataToSubmit[item.id] || ""}
+                        onChange={(e) =>
+                          handleFormDataChange(item.id, e.target.value)
+                        }
+                        supportedValues={item.supportedValues}
+                      />
+                    </div>
+                  );
+                } else if (item.fieldType === "time") {
+                  return (
+                    <div
+                      className="full-width-button flex flex-col"
+                      key={item.id}
+                    >
+                      <LocalizationProvider dateAdapter={AdapterDayjs}>
+                        <TimePicker
+                          label={item.label}
+                          value={
+                            formDataToSubmit[item.id]
+                              ? dayjs(formDataToSubmit[item.id], "hh:mm A")
+                              : null
+                          }
+                          onChange={(e) =>
+                            handleFormDataChange(item.id, e.format("hh:mm A"))
+                          }
+                          sx={{
+                            minWidth: 120,
+                            "& .MuiInputLabel-root": {
+                              color: "green", // Default color
+                            },
+                            // '&:hover .MuiInputLabel-root': {
+                            //   color: 'orange', // Color on hover
+                            // },
+                            "& .MuiInputLabel-root.Mui-focused": {
+                              color: "green", // Color when focused
+                            },
+                            "& .MuiOutlinedInput-root": {
+                              "& fieldset": {
+                                borderColor: "gray", // Default border color
+                              },
+                              // '&:hover fieldset': {
+                              //   borderColor: 'orange', // Border color on hover
+                              // },
+                              "&.Mui-focused fieldset": {
+                                borderColor: "green", // Border color when focused
+                              },
+                            },
+                          }}
+                        />
+                      </LocalizationProvider>
+                    </div>
+                  );
+                } else if (item.fieldType === "uploadImage") {
+                  return (
+                    <ImageUpload onFileChange={handleFileChange} />
+                  );
+                }
+              })}
+            </div>
+          </div>
+        </div>
+
+        <div className="flex justify-between p-16">
+          <Button variant="contained" onClick={handleCancelButtonClicked}>
+            Cancel
+          </Button>
+          <Button variant="contained" onClick={handleSaveButtonClicked}>
+            Save
+          </Button>
+        </div>
+      </div>
+    </>
+  );
+};
+
+export default DynamicForm;
